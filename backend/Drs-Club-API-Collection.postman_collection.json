@@ -1,0 +1,1191 @@
+{
+	"info": {
+		"_postman_id": "drs-club-api-2024",
+		"name": "Drs Club API Collection",
+		"description": "Complete API collection for Drs Club - Professional Networking Platform for Doctors and Vendors",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{auth_token}}",
+				"type": "string"
+			}
+		]
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Sign Up - Doctor",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"auth_token\", jsonData.token);",
+									"    pm.environment.set(\"user_id\", jsonData.user.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"drjohnsmith\",\n  \"email\": \"drjohn@example.com\",\n  \"password\": \"password123\",\n  \"userType\": \"doctor\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/signup",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"signup"
+							]
+						},
+						"description": "Register a new doctor account"
+					},
+					"response": []
+				},
+				{
+					"name": "Sign Up - Vendor",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"auth_token\", jsonData.token);",
+									"    pm.environment.set(\"user_id\", jsonData.user.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"medtechsupply\",\n  \"email\": \"contact@medtechsupply.com\",\n  \"password\": \"password123\",\n  \"userType\": \"vendor\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/signup",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"signup"
+							]
+						},
+						"description": "Register a new vendor account"
+					},
+					"response": []
+				},
+				{
+					"name": "Sign In - Doctor",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"auth_token\", jsonData.token);",
+									"    pm.environment.set(\"user_id\", jsonData.user.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"drjohnsmith\",\n  \"password\": \"password123\",\n  \"userType\": \"doctor\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/signin",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"signin"
+							]
+						},
+						"description": "Sign in as a doctor"
+					},
+					"response": []
+				},
+				{
+					"name": "Sign In - Vendor",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    pm.environment.set(\"auth_token\", jsonData.token);",
+									"    pm.environment.set(\"user_id\", jsonData.user.id);",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"medtechsupply\",\n  \"password\": \"password123\",\n  \"userType\": \"vendor\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/signin",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"signin"
+							]
+						},
+						"description": "Sign in as a vendor"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Current User",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/auth/me",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"me"
+							]
+						},
+						"description": "Get current authenticated user information"
+					},
+					"response": []
+				},
+				{
+					"name": "Doctor Onboarding",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "firstName",
+									"value": "John",
+									"type": "text"
+								},
+								{
+									"key": "lastName",
+									"value": "Smith",
+									"type": "text"
+								},
+								{
+									"key": "specialty",
+									"value": "Cardiology",
+									"type": "text"
+								},
+								{
+									"key": "subSpecialty",
+									"value": "Interventional Cardiology",
+									"type": "text"
+								},
+								{
+									"key": "location",
+									"value": "123 Medical Center Dr",
+									"type": "text"
+								},
+								{
+									"key": "city",
+									"value": "New York",
+									"type": "text"
+								},
+								{
+									"key": "state",
+									"value": "NY",
+									"type": "text"
+								},
+								{
+									"key": "zip",
+									"value": "10001",
+									"type": "text"
+								},
+								{
+									"key": "phone",
+									"value": "+1234567890",
+									"type": "text"
+								},
+								{
+									"key": "bio",
+									"value": "Experienced cardiologist with 15 years in practice",
+									"type": "text"
+								},
+								{
+									"key": "profilePicture",
+									"type": "file",
+									"src": []
+								},
+								{
+									"key": "medicalLicense",
+									"type": "file",
+									"src": []
+								},
+								{
+									"key": "degreeCertificate",
+									"type": "file",
+									"src": []
+								},
+								{
+									"key": "boardCertification",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/onboarding/doctor",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"onboarding",
+								"doctor"
+							]
+						},
+						"description": "Complete doctor profile onboarding with documents"
+					},
+					"response": []
+				},
+				{
+					"name": "Vendor Onboarding",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "companyName",
+									"value": "MedTech Supply Co",
+									"type": "text"
+								},
+								{
+									"key": "contactPerson",
+									"value": "Jane Doe",
+									"type": "text"
+								},
+								{
+									"key": "phone",
+									"value": "+1234567890",
+									"type": "text"
+								},
+								{
+									"key": "website",
+									"value": "https://medtechsupply.com",
+									"type": "text"
+								},
+								{
+									"key": "category",
+									"value": "Medical Equipment",
+									"type": "text"
+								},
+								{
+									"key": "address",
+									"value": "456 Business Blvd",
+									"type": "text"
+								},
+								{
+									"key": "city",
+									"value": "Los Angeles",
+									"type": "text"
+								},
+								{
+									"key": "state",
+									"value": "CA",
+									"type": "text"
+								},
+								{
+									"key": "zip",
+									"value": "90001",
+									"type": "text"
+								},
+								{
+									"key": "description",
+									"value": "Leading supplier of medical equipment and supplies",
+									"type": "text"
+								},
+								{
+									"key": "servicesOffered",
+									"value": "Medical equipment, surgical supplies, diagnostic tools",
+									"type": "text"
+								},
+								{
+									"key": "companyLogo",
+									"type": "file",
+									"src": []
+								},
+								{
+									"key": "businessLicense",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/onboarding/vendor",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"onboarding",
+								"vendor"
+							]
+						},
+						"description": "Complete vendor profile onboarding"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Users",
+			"item": [
+				{
+					"name": "Search Users",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/users/search?type=doctor&specialty=Cardiology&location=New York",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users",
+								"search"
+							],
+							"query": [
+								{
+									"key": "type",
+									"value": "doctor",
+									"description": "doctor or vendor"
+								},
+								{
+									"key": "specialty",
+									"value": "Cardiology",
+									"description": "For doctors"
+								},
+								{
+									"key": "category",
+									"value": "Medical Equipment",
+									"description": "For vendors",
+									"disabled": true
+								},
+								{
+									"key": "location",
+									"value": "New York"
+								},
+								{
+									"key": "search",
+									"value": "John",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Search for doctors or vendors with filters"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Featured Vendors",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/users/featured-vendors",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users",
+								"featured-vendors"
+							]
+						},
+						"description": "Get all featured vendors for promotional banner"
+					},
+					"response": []
+				},
+				{
+					"name": "Get User By ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/users/{{user_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users",
+								"{{user_id}}"
+							]
+						},
+						"description": "Get user profile by ID (limited info if not connected)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Profile",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Smith\",\n  \"bio\": \"Updated bio with more details\",\n  \"phone\": \"+1234567890\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/users/profile",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users",
+								"profile"
+							]
+						},
+						"description": "Update current user's profile"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Connections",
+			"item": [
+				{
+					"name": "Send Connection Request",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"recipientId\": \"USER_ID_HERE\",\n  \"message\": \"Hi! I'd like to connect with you.\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/connections/request",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"connections",
+								"request"
+							]
+						},
+						"description": "Send a connection request to another user"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Pending Requests",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/connections/pending",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"connections",
+								"pending"
+							]
+						},
+						"description": "Get all pending connection requests received"
+					},
+					"response": []
+				},
+				{
+					"name": "Accept Connection",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/connections/accept/{{connection_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"connections",
+								"accept",
+								"{{connection_id}}"
+							]
+						},
+						"description": "Accept a pending connection request"
+					},
+					"response": []
+				},
+				{
+					"name": "Reject Connection",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/connections/reject/{{connection_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"connections",
+								"reject",
+								"{{connection_id}}"
+							]
+						},
+						"description": "Reject a pending connection request"
+					},
+					"response": []
+				},
+				{
+					"name": "Get My Connections",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/connections/my-connections",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"connections",
+								"my-connections"
+							]
+						},
+						"description": "Get all accepted connections for current user"
+					},
+					"response": []
+				},
+				{
+					"name": "Remove Connection",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/connections/{{user_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"connections",
+								"{{user_id}}"
+							]
+						},
+						"description": "Remove an existing connection"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Chat",
+			"item": [
+				{
+					"name": "Get Conversations",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/chat/conversations",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"chat",
+								"conversations"
+							]
+						},
+						"description": "Get all conversations with last message and unread count"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Messages with User",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/chat/messages/{{user_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"chat",
+								"messages",
+								"{{user_id}}"
+							]
+						},
+						"description": "Get chat history with a specific user (only if connected)"
+					},
+					"response": []
+				},
+				{
+					"name": "Send Message",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"recipientId\": \"USER_ID_HERE\",\n  \"content\": \"Hello! How are you?\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/chat/send",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"chat",
+								"send"
+							]
+						},
+						"description": "Send a message to a connected user"
+					},
+					"response": []
+				},
+				{
+					"name": "Mark Message as Read",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/chat/mark-read/{{message_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"chat",
+								"mark-read",
+								"{{message_id}}"
+							]
+						},
+						"description": "Mark a specific message as read"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Unread Count",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/chat/unread-count",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"chat",
+								"unread-count"
+							]
+						},
+						"description": "Get total unread message count for current user"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Documents",
+			"item": [
+				{
+					"name": "Get All Documents",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/documents",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"documents"
+							]
+						},
+						"description": "Get all documents for current doctor (Doctors only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Upload Document",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "document",
+									"type": "file",
+									"src": []
+								},
+								{
+									"key": "title",
+									"value": "Medical License",
+									"type": "text"
+								},
+								{
+									"key": "type",
+									"value": "medical-license",
+									"description": "medical-license, degree, board-certification, other",
+									"type": "text"
+								},
+								{
+									"key": "notes",
+									"value": "Valid until 2025",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/documents/upload",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"documents",
+								"upload"
+							]
+						},
+						"description": "Upload a new document (Doctors only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Document",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"title\": \"Updated Medical License\",\n  \"notes\": \"Renewed for 2024-2026\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/documents/{{document_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"documents",
+								"{{document_id}}"
+							]
+						},
+						"description": "Update document details (Doctors only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Document",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/documents/{{document_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"documents",
+								"{{document_id}}"
+							]
+						},
+						"description": "Delete a document (Doctors only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Download Document",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/documents/download/{{document_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"documents",
+								"download",
+								"{{document_id}}"
+							]
+						},
+						"description": "Download a document (Doctors only)"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Events",
+			"item": [
+				{
+					"name": "Get All Events",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/events?type=conference&status=upcoming",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"events"
+							],
+							"query": [
+								{
+									"key": "type",
+									"value": "conference",
+									"description": "conference, webinar, networking, workshop, other"
+								},
+								{
+									"key": "status",
+									"value": "upcoming",
+									"description": "upcoming, ongoing, completed, cancelled"
+								},
+								{
+									"key": "upcoming",
+									"value": "true",
+									"description": "Get only upcoming events",
+									"disabled": true
+								}
+							]
+						},
+						"description": "Get all events with optional filters"
+					},
+					"response": []
+				},
+				{
+					"name": "Get Event by ID",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/events/{{event_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"events",
+								"{{event_id}}"
+							]
+						},
+						"description": "Get single event with full details"
+					},
+					"response": []
+				},
+				{
+					"name": "Create Event",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "title",
+									"value": "Annual Medical Conference 2024",
+									"type": "text"
+								},
+								{
+									"key": "description",
+									"value": "Join us for the largest medical conference of the year",
+									"type": "text"
+								},
+								{
+									"key": "date",
+									"value": "2024-12-15T09:00:00Z",
+									"type": "text"
+								},
+								{
+									"key": "endDate",
+									"value": "2024-12-17T18:00:00Z",
+									"type": "text"
+								},
+								{
+									"key": "location",
+									"value": "Convention Center, New York",
+									"type": "text"
+								},
+								{
+									"key": "type",
+									"value": "conference",
+									"type": "text"
+								},
+								{
+									"key": "maxAttendees",
+									"value": "500",
+									"type": "text"
+								},
+								{
+									"key": "isVirtual",
+									"value": "false",
+									"type": "text"
+								},
+								{
+									"key": "virtualLink",
+									"value": "",
+									"type": "text",
+									"disabled": true
+								},
+								{
+									"key": "tags",
+									"value": "[\"medical\", \"conference\", \"networking\"]",
+									"type": "text"
+								},
+								{
+									"key": "image",
+									"type": "file",
+									"src": []
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/events",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"events"
+							]
+						},
+						"description": "Create a new event (Authenticated users)"
+					},
+					"response": []
+				},
+				{
+					"name": "Update Event",
+					"request": {
+						"method": "PUT",
+						"header": [],
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "title",
+									"value": "Updated Event Title",
+									"type": "text"
+								},
+								{
+									"key": "description",
+									"value": "Updated description",
+									"type": "text"
+								},
+								{
+									"key": "maxAttendees",
+									"value": "600",
+									"type": "text"
+								}
+							]
+						},
+						"url": {
+							"raw": "{{base_url}}/events/{{event_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"events",
+								"{{event_id}}"
+							]
+						},
+						"description": "Update event (Organizer only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Delete Event",
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/events/{{event_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"events",
+								"{{event_id}}"
+							]
+						},
+						"description": "Delete event (Organizer only)"
+					},
+					"response": []
+				},
+				{
+					"name": "Register for Event",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/events/{{event_id}}/register",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"events",
+								"{{event_id}}",
+								"register"
+							]
+						},
+						"description": "Register for an event"
+					},
+					"response": []
+				},
+				{
+					"name": "Unregister from Event",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/events/{{event_id}}/unregister",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"events",
+								"{{event_id}}",
+								"unregister"
+							]
+						},
+						"description": "Unregister from an event"
+					},
+					"response": []
+				},
+				{
+					"name": "Get My Registered Events",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/events/my/registered",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"events",
+								"my",
+								"registered"
+							]
+						},
+						"description": "Get all events current user is registered for"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Health Check",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{base_url}}/health",
+					"host": [
+						"{{base_url}}"
+					],
+					"path": [
+						"health"
+					]
+				},
+				"description": "Check if API is running"
+			},
+			"response": []
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:5000/api",
+			"type": "string"
+		}
+	]
+}
