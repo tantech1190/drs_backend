@@ -57,6 +57,7 @@ const documentSchema = new mongoose.Schema({
       // Transform field names to match frontend expectations
       return {
         _id: ret._id,
+        user: ret.user,  // Include populated user data
         name: ret.title,
         documentType: typeMap[ret.type] || ret.type,
         category: ret.category,

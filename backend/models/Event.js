@@ -45,7 +45,7 @@ const eventSchema = new mongoose.Schema({
     }
   }],
   maxAttendees: Number,
-  image: String,
+  images: [String], // Changed from single image to array of images
   isVirtual: {
     type: Boolean,
     default: false

@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Event = require('../models/Event');
+const Wallet = require('../models/Wallet');
 const { auth } = require('../middleware/auth');
 const { uploadImage } = require('../middleware/upload');
 
@@ -65,7 +66,7 @@ router.get('/:id', async (req, res) => {
 // @route   POST /api/events
 // @desc    Create new event
 // @access  Private
-router.post('/', auth, uploadImage.single('image'), async (req, res) => {
+router.post('/', auth, uploadImage.array('image', 10), async (req, res) => {
   try {
     const {
       title,
@@ -94,15 +95,42 @@ router.post('/', auth, uploadImage.single('image'), async (req, res) => {
       tags: tags ? JSON.parse(tags) : []
     });
 
-    if (req.file) {
-      event.image = '/uploads/images/' + req.file.filename;
+    // Handle multiple images
+    if (req.files && req.files.length > 0) {
+      event.images = req.files.map(file => '/uploads/images/' + file.filename);
     }
 
     await event.save();
 
+    // Credit wallet for event creation (5 rupees)
+    try {
+      let wallet = await Wallet.findOne({ user: req.userId });
+      
+      if (!wallet) {
+        wallet = new Wallet({
+          user: req.userId,
+          balance: 0,
+          totalEarned: 0,
+          totalWithdrawn: 0,
+          transactions: []
+        });
+      }
+      
+      await wallet.addCredit(
+        5, 
+        `Event created: ${title}`,
+        event._id
+      );
+      
+      console.log(`Wallet credited: $5 for event creation by user ${req.userId}`);
+    } catch (walletError) {
+      console.error('Wallet credit error:', walletError);
+      // Don't fail event creation if wallet credit fails
+    }
+
     res.status(201).json({
       success: true,
-      message: 'Event created successfully',
+      message: 'Event created successfully. $5 credited to your wallet!',
       event
     });
   } catch (error) {
@@ -114,7 +142,7 @@ router.post('/', auth, uploadImage.single('image'), async (req, res) => {
 // @route   PUT /api/events/:id
 // @desc    Update event
 // @access  Private (organizer only)
-router.put('/:id', auth, uploadImage.single('image'), async (req, res) => {
+router.put('/:id', auth, uploadImage.array('image', 10), async (req, res) => {
   try {
     const event = await Event.findById(req.params.id);
 
@@ -139,8 +167,10 @@ router.put('/:id', auth, uploadImage.single('image'), async (req, res) => {
       }
     });
 
-    if (req.file) {
-      event.image = '/uploads/images/' + req.file.filename;
+    // Handle multiple images - append to existing images array
+    if (req.files && req.files.length > 0) {
+      const newImages = req.files.map(file => '/uploads/images/' + file.filename);
+      event.images = event.images ? [...event.images, ...newImages] : newImages;
     }
 
     await event.save();

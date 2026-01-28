@@ -23,8 +23,12 @@ const userSchema = new mongoose.Schema({
   },
   userType: {
     type: String,
-    enum: ['doctor', 'vendor'],
+    enum: ['doctor', 'vendor', 'admin'],
     required: true
+  },
+  isAdmin: {
+    type: Boolean,
+    default: false
   },
   isOnboarded: {
     type: Boolean,
@@ -118,6 +122,38 @@ const userSchema = new mongoose.Schema({
   },
   featuredUntil: Date,
   
+  // Awards & Achievements (for event organizers)
+  awards: [{
+    awardType: {
+      type: String,
+      enum: ['star', 'trophy', 'crown', 'shield', 'zap'],
+      required: true
+    },
+    grantedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    grantedAt: {
+      type: Date,
+      default: Date.now
+    },
+    notes: String
+  }],
+  
+  // Bank details (for withdrawals) - USA specific
+  bankDetails: {
+    accountHolderName: String,
+    bankName: String,
+    accountNumber: String,
+    routingNumber: String,
+    accountType: {
+      type: String,
+      enum: ['checking', 'savings'],
+      default: 'checking'
+    }
+  },
+  
   // Connections
   connections: [{
     type: mongoose.Schema.Types.ObjectId,
@@ -176,7 +212,8 @@ userSchema.methods.getPublicProfile = function() {
     profilePicture: this.profilePicture,
     companyLogo: this.companyLogo,
     emailVerified: this.emailVerified,
-    phoneVerified: this.phoneVerified
+    phoneVerified: this.phoneVerified,
+    isFeatured: this.isFeatured
   };
   
   // Include job status if doctor and set to show

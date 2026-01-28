@@ -4,7 +4,6 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
 
-// Load environment variables
 dotenv.config();
 
 // Import routes
@@ -14,6 +13,11 @@ const connectionRoutes = require('./routes/connections');
 const chatRoutes = require('./routes/chat');
 const documentRoutes = require('./routes/documents');
 const eventRoutes = require('./routes/events');
+const jobsRoutes = require('./routes/jobs');
+const contactRoutes = require('./routes/contact');
+const adminRoutes = require('./routes/admin');
+const publicRoutes = require('./routes/public');
+const walletRoutes = require('./routes/wallet'); // Add wallet route
 
 // Initialize express app
 const app = express();
@@ -23,16 +27,9 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+
 // Serve uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-// MongoDB Connection
-// mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/drs-club', {
-//   useNewUrlParser: true,
-//   useUnifiedTopology: true,
-// })
-// .then(() => console.log('MongoDB connected successfully'))
-// .catch((err) => console.error('MongoDB connection error:', err));
 
 const { PORT = 5002, MONGO_URI } = process.env;
 
@@ -50,12 +47,17 @@ mongoose
 
 
 // API Routes
+app.use('/api/public', publicRoutes);  // Public routes FIRST (no auth required)
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/connections', connectionRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/documents', documentRoutes);
 app.use('/api/events', eventRoutes);
+app.use('/api/jobs', jobsRoutes);
+app.use('/api/contact', contactRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/wallet', walletRoutes); // Wallet route
 
 // Health check route
 app.get('/api/health', (req, res) => {

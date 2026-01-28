@@ -78,7 +78,7 @@ router.post('/signup', [
 router.post('/signin', [
   body('username').trim().notEmpty(),
   body('password').notEmpty(),
-  body('userType').isIn(['doctor', 'vendor'])
+  body('userType').isIn(['doctor', 'vendor', 'admin'])
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -88,8 +88,20 @@ router.post('/signin', [
 
     const { username, password, userType } = req.body;
 
-    // Find user
-    const user = await User.findOne({ username: username.toLowerCase(), userType });
+    // Find user - for admin, check both userType and isAdmin flag
+    let user;
+    if (userType === 'admin') {
+      user = await User.findOne({ 
+        username: username.toLowerCase(),
+        $or: [
+          { userType: 'admin' },
+          { isAdmin: true }
+        ]
+      });
+    } else {
+      user = await User.findOne({ username: username.toLowerCase(), userType });
+    }
+    
     if (!user) {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
@@ -100,9 +112,11 @@ router.post('/signin', [
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
-    // Update last login
-    user.lastLogin = new Date();
-    await user.save();
+    // Update last login - use updateOne to bypass validation
+    await User.updateOne(
+      { _id: user._id },
+      { $set: { lastLogin: new Date() } }
+    );
 
     // Generate token
     const token = generateToken(user._id);
@@ -116,6 +130,7 @@ router.post('/signin', [
         username: user.username,
         email: user.email,
         userType: user.userType,
+        isAdmin: user.isAdmin,
         isOnboarded: user.isOnboarded,
         firstName: user.firstName,
         lastName: user.lastName,
@@ -126,7 +141,17 @@ router.post('/signin', [
     });
   } catch (error) {
     console.error('Signin error:', error);
-    res.status(500).json({ success: false, message: 'Server error during signin' });
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      username: req.body?.username,
+      userType: req.body?.userType
+    });
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error during signin',
+      ...(process.env.NODE_ENV === 'development' && { error: error.message })
+    });
   }
 });
 

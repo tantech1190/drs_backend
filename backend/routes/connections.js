@@ -83,6 +83,28 @@ router.get('/pending', auth, async (req, res) => {
   }
 });
 
+// @route   GET /api/connections/pending-sent
+// @desc    Get pending connection requests sent by user
+// @access  Private
+router.get('/pending-sent', auth, async (req, res) => {
+  try {
+    const pendingSent = await Connection.find({
+      requester: req.userId,
+      status: 'pending'
+    })
+    .populate('recipient', 'username firstName lastName companyName userType city state profilePicture companyLogo')
+    .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      requests: pendingSent
+    });
+  } catch (error) {
+    console.error('Get pending sent requests error:', error);
+    res.status(500).json({ success: false, message: 'Error fetching pending sent requests' });
+  }
+});
+
 // @route   POST /api/connections/accept/:connectionId
 // @desc    Accept connection request
 // @access  Private

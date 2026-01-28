@@ -10,6 +10,9 @@ const path = require('path');
 // @route   GET /api/users/search
 // @desc    Search for users (doctors or vendors)
 // @access  Private
+// @route   GET /api/users/search
+// @desc    Search for users (doctors or vendors)
+// @access  Private
 router.get('/search', auth, async (req, res) => {
   try {
     const { type, specialty, category, location, search } = req.query;
@@ -52,6 +55,13 @@ router.get('/search', auth, async (req, res) => {
       .select('-password')
       .limit(50);
 
+    // 🐛 DEBUG: Log raw user data
+    console.log('🔍 Raw users from DB:', users.map(u => ({
+      name: u.firstName || u.companyName,
+      isFeatured: u.isFeatured,
+      userType: u.userType
+    })));
+
     // Check if users are connected and fetch documents for doctors
     const usersWithConnectionStatus = await Promise.all(users.map(async (user) => {
       const isConnected = req.user.connections.some(
@@ -60,13 +70,20 @@ router.get('/search', auth, async (req, res) => {
       
       const profile = isConnected ? user.getFullProfile() : user.getPublicProfile();
       
+      // 🐛 DEBUG: Log profile after method call
+      console.log(`🔍 Profile for ${user.firstName || user.companyName}:`, {
+        isFeatured: profile.isFeatured,
+        userType: profile.userType,
+        isConnected
+      });
+      
       // Fetch documents for doctors to determine verification status
       let documents = [];
       if (user.userType === 'doctor') {
         documents = await Document.find({ user: user._id }).select('type isVerified');
       }
       
-      return {
+      const finalProfile = {
         ...profile,
         isConnected,
         documents: documents.map(doc => ({
@@ -76,6 +93,13 @@ router.get('/search', auth, async (req, res) => {
           verified: doc.isVerified
         }))
       };
+      
+      // 🐛 DEBUG: Log final profile
+      console.log(`🔍 Final profile for ${user.firstName || user.companyName}:`, {
+        isFeatured: finalProfile.isFeatured
+      });
+      
+      return finalProfile;
     }));
 
     res.json({
@@ -110,6 +134,34 @@ router.get('/featured-vendors', async (req, res) => {
   } catch (error) {
     console.error('Get featured vendors error:', error);
     res.status(500).json({ success: false, message: 'Error fetching featured vendors' });
+  }
+});
+
+// @route   GET /api/users/bank-details
+// @desc    Get user bank details (masked)
+// @access  Private
+router.get('/bank-details', auth, async (req, res) => {
+  try {
+    if (!req.user.bankDetails || !req.user.bankDetails.accountNumber) {
+      return res.json({
+        success: true,
+        bankDetails: null
+      });
+    }
+
+    res.json({
+      success: true,
+      bankDetails: {
+        accountHolderName: req.user.bankDetails.accountHolderName,
+        bankName: req.user.bankDetails.bankName,
+        accountNumber: `****${req.user.bankDetails.accountNumber.slice(-4)}`, // Mask account number
+        routingNumber: req.user.bankDetails.routingNumber,
+        accountType: req.user.bankDetails.accountType
+      }
+    });
+  } catch (error) {
+    console.error('Get bank details error:', error);
+    res.status(500).json({ success: false, message: 'Error fetching bank details' });
   }
 });
 
@@ -156,17 +208,58 @@ router.put('/profile', auth, uploadImage.fields([
       ? ['firstName', 'lastName', 'specialty', 'subSpecialty', 'location', 'city', 'state', 'zip', 'phone', 'bio', 'jobStatus', 'showJobStatus', 'showPhone', 'showEmail', 'showLocation', 'showBio']
       : ['companyName', 'contactPerson', 'phone', 'website', 'category', 'address', 'city', 'state', 'zip', 'description', 'servicesOffered'];
 
+    // Bank details fields (optional, common for both types)
+    const bankDetailsFields = ['accountHolderName', 'bankName', 'accountNumber', 'routingNumber', 'accountType'];
+    
     const updates = Object.keys(req.body);
-    const isValidUpdate = updates.every(update => allowedUpdates.includes(update));
+    
+    // Separate profile updates and bank details updates
+    const profileUpdates = updates.filter(update => allowedUpdates.includes(update));
+    const bankUpdates = updates.filter(update => bankDetailsFields.includes(update));
+    const invalidUpdates = updates.filter(update => 
+      !allowedUpdates.includes(update) && !bankDetailsFields.includes(update)
+    );
 
-    if (!isValidUpdate) {
-      return res.status(400).json({ success: false, message: 'Invalid updates' });
+    if (invalidUpdates.length > 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Invalid updates: ${invalidUpdates.join(', ')}` 
+      });
     }
 
-    // Update regular fields
-    updates.forEach(update => {
+    // Update regular profile fields
+    profileUpdates.forEach(update => {
       req.user[update] = req.body[update];
     });
+
+    // Update bank details if provided
+    if (bankUpdates.length > 0) {
+      // Validate routing number if provided
+      if (req.body.routingNumber && !/^\d{9}$/.test(req.body.routingNumber)) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Routing number must be exactly 9 digits' 
+        });
+      }
+
+      // Validate account type if provided
+      if (req.body.accountType && !['checking', 'savings'].includes(req.body.accountType)) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Account type must be either checking or savings' 
+        });
+      }
+
+      // Initialize bankDetails if not exists
+      if (!req.user.bankDetails) {
+        req.user.bankDetails = {};
+      }
+
+      // Update bank details fields
+      bankUpdates.forEach(update => {
+        req.user.bankDetails[update] = req.body[update];
+      });
+    }
 
     // Handle profile picture upload (for doctors)
     if (req.files && req.files.profilePicture) {
@@ -220,6 +313,65 @@ router.put('/profile', auth, uploadImage.fields([
   } catch (error) {
     console.error('Update profile error:', error);
     res.status(500).json({ success: false, message: 'Error updating profile' });
+  }
+});
+
+// @route   PUT /api/users/bank-details
+// @desc    Update user bank details (separate endpoint)
+// @access  Private
+router.put('/bank-details', auth, async (req, res) => {
+  try {
+    const { accountHolderName, bankName, accountNumber, routingNumber, accountType } = req.body;
+
+    // Validate required fields
+    if (!accountHolderName || !bankName || !accountNumber || !routingNumber) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'All bank details fields are required' 
+      });
+    }
+
+    // Validate routing number (must be 9 digits)
+    if (!/^\d{9}$/.test(routingNumber)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Routing number must be exactly 9 digits' 
+      });
+    }
+
+    // Validate account type
+    if (accountType && !['checking', 'savings'].includes(accountType)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Account type must be either checking or savings' 
+      });
+    }
+
+    // Update bank details
+    req.user.bankDetails = {
+      accountHolderName,
+      bankName,
+      accountNumber,
+      routingNumber,
+      accountType: accountType || 'checking'
+    };
+
+    await req.user.save();
+
+    res.json({
+      success: true,
+      message: 'Bank details updated successfully',
+      bankDetails: {
+        accountHolderName: req.user.bankDetails.accountHolderName,
+        bankName: req.user.bankDetails.bankName,
+        accountNumber: `****${req.user.bankDetails.accountNumber.slice(-4)}`, // Mask account number
+        routingNumber: req.user.bankDetails.routingNumber,
+        accountType: req.user.bankDetails.accountType
+      }
+    });
+  } catch (error) {
+    console.error('Update bank details error:', error);
+    res.status(500).json({ success: false, message: 'Error updating bank details' });
   }
 });
 
