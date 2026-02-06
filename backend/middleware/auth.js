@@ -61,6 +61,22 @@ const isVendor = (req, res, next) => {
   next();
 };
 
+// Check if user is paramedical
+const isParaMedical = (req, res, next) => {
+  if (req.user.userType !== 'paramedical') {
+    return res.status(403).json({ success: false, message: 'Access denied. ParaMedical users only.' });
+  }
+  next();
+};
+
+// Check if user is doctor OR paramedical (for shared features like documents)
+const isDoctorOrParaMedical = (req, res, next) => {
+  if (req.user.userType !== 'doctor' && req.user.userType !== 'paramedical') {
+    return res.status(403).json({ success: false, message: 'Access denied. Doctors and ParaMedical users only.' });
+  }
+  next();
+};
+
 // Check if vendor has active subscription
 const hasActiveSubscription = (req, res, next) => {
   if (req.user.userType === 'vendor' && req.user.subscription.status !== 'active') {
@@ -118,4 +134,4 @@ const isAdmin = (req, res, next) => {
   next();
 };
 
-module.exports = { auth, isDoctor, isVendor, hasActiveSubscription, optionalAuth, isAdmin };
+module.exports = { auth, isDoctor, isVendor, hasActiveSubscription, optionalAuth, isAdmin, isParaMedical, isDoctorOrParaMedical };

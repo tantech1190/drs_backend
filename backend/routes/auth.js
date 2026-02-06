@@ -20,7 +20,7 @@ router.post('/signup', [
   body('username').trim().isLength({ min: 3 }).toLowerCase(),
   body('email').isEmail().normalizeEmail(),
   body('password').isLength({ min: 6 }),
-  body('userType').isIn(['doctor', 'vendor'])
+  body('userType').isIn(['doctor', 'vendor', 'paramedical','attorneys'])
 ], async (req, res) => {
   try {
     // Validate request
@@ -78,7 +78,7 @@ router.post('/signup', [
 router.post('/signin', [
   body('username').trim().notEmpty(),
   body('password').notEmpty(),
-  body('userType').isIn(['doctor', 'vendor', 'admin'])
+  body('userType').isIn(['doctor', 'vendor', 'paramedical', 'attorneys','admin'])
 ], async (req, res) => {
   try {
     const errors = validationResult(req);
@@ -150,6 +150,106 @@ router.post('/signin', [
     res.status(500).json({ 
       success: false, 
       message: 'Server error during signin',
+      ...(process.env.NODE_ENV === 'development' && { error: error.message })
+    });
+  }
+});
+
+// @route   POST /api/auth/login
+// @desc    Login user (alias for signin, accepts email or username)
+// @access  Public
+router.post('/login', [
+  body('email').trim().notEmpty(),
+  body('password').notEmpty()
+], async (req, res) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ success: false, errors: errors.array() });
+    }
+
+    const { email, password, type } = req.body;
+
+    // Find user by email or username
+    let user;
+    if (type === 'admin') {
+      user = await User.findOne({ 
+        $or: [
+          { email: email.toLowerCase() },
+          { username: email.toLowerCase() }
+        ],
+        $and: [
+          {
+            $or: [
+              { userType: 'admin' },
+              { isAdmin: true }
+            ]
+          }
+        ]
+      });
+    } else {
+      const query = {
+        $or: [
+          { email: email.toLowerCase() },
+          { username: email.toLowerCase() }
+        ]
+      };
+      
+      // If type is provided, also filter by userType
+      if (type) {
+        query.userType = type;
+      }
+      
+      user = await User.findOne(query);
+    }
+    
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+
+    // Check password
+    const isMatch = await user.comparePassword(password);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+
+    // Update last login - use updateOne to bypass validation
+    await User.updateOne(
+      { _id: user._id },
+      { $set: { lastLogin: new Date() } }
+    );
+
+    // Generate token
+    const token = generateToken(user._id);
+
+    res.json({
+      success: true,
+      message: 'Logged in successfully',
+      token,
+      user: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        userType: user.userType,
+        isAdmin: user.isAdmin,
+        isOnboarded: user.isOnboarded,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        companyName: user.companyName,
+        profilePicture: user.profilePicture,
+        companyLogo: user.companyLogo
+      }
+    });
+  } catch (error) {
+    console.error('Login error:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      email: req.body?.email
+    });
+    res.status(500).json({ 
+      success: false, 
+      message: 'Server error during login',
       ...(process.env.NODE_ENV === 'development' && { error: error.message })
     });
   }
@@ -325,6 +425,201 @@ router.post('/onboarding/vendor', auth, uploadOnboarding.fields([
   } catch (error) {
     console.error('Vendor onboarding error:', error);
     res.status(500).json({ success: false, message: 'Error during onboarding' });
+  }
+});
+
+// @route   POST /api/auth/onboarding/attorneys
+// @desc    Complete attorney onboarding
+// @access  Private
+router.post('/onboarding/attorneys', auth, uploadOnboarding.fields([
+  { name: 'profilePicture', maxCount: 1 },
+  { name: 'collegeDegree', maxCount: 1 },
+  { name: 'stateLicense', maxCount: 1 }
+]), async (req, res) => {
+  try {
+    if (req.user.userType !== 'attorneys') {
+      return res.status(403).json({ success: false, message: 'Only attorneys can access this endpoint' });
+    }
+
+    const {
+      firstName,
+      lastName,
+      firmName,
+      specialty,
+      licenseNumber,
+      location,
+      city,
+      state,
+      zip,
+      phone,
+      website,
+      bio
+    } = req.body;
+
+    // Update user profile
+    req.user.firstName = firstName;
+    req.user.lastName = lastName;
+    req.user.companyName = firmName; // Using companyName field for law firm
+    req.user.specialty = specialty; // e.g., "Medical Malpractice", "Healthcare Law", etc.
+    req.user.location = location;
+    req.user.city = city;
+    req.user.state = state;
+    req.user.zip = zip;
+    req.user.phone = phone;
+    req.user.website = website;
+    req.user.bio = bio;
+    req.user.isOnboarded = true;
+
+    // Handle file uploads
+    if (req.files?.profilePicture) {
+      req.user.profilePicture = '/uploads/images/' + req.files.profilePicture[0].filename;
+    }
+
+    await req.user.save();
+
+    // Save documents
+    const Document = require('../models/Document');
+    const documents = [];
+
+    if (req.files?.collegeDegree) {
+      const doc = new Document({
+        user: req.user._id,
+        title: 'College Degree',
+        type: 'college-degree',
+        fileName: req.files.collegeDegree[0].originalname,
+        filePath: '/uploads/documents/' + req.files.collegeDegree[0].filename,
+        fileSize: req.files.collegeDegree[0].size,
+        mimeType: req.files.collegeDegree[0].mimetype
+      });
+      await doc.save();
+      documents.push(doc);
+    }
+
+    if (req.files?.stateLicense) {
+      const doc = new Document({
+        user: req.user._id,
+        title: 'State License',
+        type: 'state-license',
+        fileName: req.files.stateLicense[0].originalname,
+        filePath: '/uploads/documents/' + req.files.stateLicense[0].filename,
+        fileSize: req.files.stateLicense[0].size,
+        mimeType: req.files.stateLicense[0].mimetype
+      });
+      await doc.save();
+      documents.push(doc);
+    }
+
+    res.json({
+      success: true,
+      message: 'Attorney onboarding completed successfully',
+      user: req.user.getFullProfile(),
+      documents
+    });
+  } catch (error) {
+    console.error('Attorney onboarding error:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Error message:', error.message);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error during onboarding',
+      error: error.message 
+    });
+  }
+});
+
+// @route   POST /api/auth/onboarding/paramedical
+// @desc    Complete paramedical staff onboarding
+// @access  Private
+router.post('/onboarding/paramedical', auth, uploadOnboarding.fields([
+  { name: 'profilePicture', maxCount: 1 },
+  { name: 'professionalLicense', maxCount: 1 },
+  { name: 'certification', maxCount: 1 }
+]), async (req, res) => {
+  try {
+    if (req.user.userType !== 'paramedical') {
+      return res.status(403).json({ success: false, message: 'Only paramedical staff can access this endpoint' });
+    }
+
+    const {
+      firstName,
+      lastName,
+      specialty,
+      subSpecialty,
+      location,
+      city,
+      state,
+      zip,
+      phone,
+      bio
+    } = req.body;
+
+    // Update user profile (similar to doctor but for paramedical staff)
+    req.user.firstName = firstName;
+    req.user.lastName = lastName;
+    req.user.specialty = specialty; // e.g., "Nurse", "Dietitian", "Physiotherapist"
+    req.user.subSpecialty = subSpecialty;
+    req.user.location = location;
+    req.user.city = city;
+    req.user.state = state;
+    req.user.zip = zip;
+    req.user.phone = phone;
+    req.user.bio = bio;
+    req.user.isOnboarded = true;
+
+    // Handle file uploads
+    if (req.files?.profilePicture) {
+      req.user.profilePicture = '/uploads/images/' + req.files.profilePicture[0].filename;
+    }
+
+    await req.user.save();
+
+    // Save documents
+    const Document = require('../models/Document');
+    const documents = [];
+
+    if (req.files?.professionalLicense) {
+      const doc = new Document({
+        user: req.user._id,
+        title: 'Professional License',
+        type: 'professional-license',
+        fileName: req.files.professionalLicense[0].originalname,
+        filePath: '/uploads/documents/' + req.files.professionalLicense[0].filename,
+        fileSize: req.files.professionalLicense[0].size,
+        mimeType: req.files.professionalLicense[0].mimetype
+      });
+      await doc.save();
+      documents.push(doc);
+    }
+
+    if (req.files?.certification) {
+      const doc = new Document({
+        user: req.user._id,
+        title: 'Professional Certification',
+        type: 'certification',
+        fileName: req.files.certification[0].originalname,
+        filePath: '/uploads/documents/' + req.files.certification[0].filename,
+        fileSize: req.files.certification[0].size,
+        mimeType: req.files.certification[0].mimetype
+      });
+      await doc.save();
+      documents.push(doc);
+    }
+
+    res.json({
+      success: true,
+      message: 'ParaMedical onboarding completed successfully',
+      user: req.user.getFullProfile(),
+      documents
+    });
+  } catch (error) {
+    console.error('ParaMedical onboarding error:', error);
+    console.error('Error stack:', error.stack);
+    console.error('Error message:', error.message);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error during onboarding',
+      error: error.message 
+    });
   }
 });
 

@@ -1,15 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const Document = require('../models/Document');
-const { auth, isDoctor } = require('../middleware/auth');
+const { auth, isDoctor, isDoctorOrParaMedical } = require('../middleware/auth');
 const { uploadDocument } = require('../middleware/upload');
 const fs = require('fs');
 const path = require('path');
 
 // @route   GET /api/documents
 // @desc    Get all documents for current user
-// @access  Private (Doctors only)
-router.get('/', auth, isDoctor, async (req, res) => {
+// @access  Private (Doctors and ParaMedical users)
+router.get('/', auth, isDoctorOrParaMedical, async (req, res) => {
   try {
     const documents = await Document.find({ user: req.userId }).sort({ createdAt: -1 });
 
@@ -51,8 +51,80 @@ router.get('/', auth, isDoctor, async (req, res) => {
 
 // @route   POST /api/documents/upload
 // @desc    Upload a new document
-// @access  Private (Doctors only)
-router.post('/upload', auth, isDoctor, uploadDocument.single('document'), async (req, res) => {
+// @access  Private (Doctors and ParaMedical users)
+router.post('/upload', auth, isDoctorOrParaMedical, uploadDocument.single('document'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No file uploaded' });
+    }
+
+    const { documentType, title, type, notes, category, startDate, expiryDate } = req.body;
+
+    // Map frontend documentType to backend type
+    const typeMap = {
+      'license': 'medical-license',
+      'degree': 'degree',
+      'certification': 'board-certification',
+      'other': 'other'
+    };
+
+    // Use documentType if provided, otherwise fall back to type
+    const docTypeValue = documentType || type || 'other';
+    const backendType = typeMap[docTypeValue] || docTypeValue;
+
+    const document = new Document({
+      user: req.userId,
+      title: title || req.file.originalname,
+      type: backendType,
+      fileName: req.file.originalname,
+      filePath: '/uploads/documents/' + req.file.filename,
+      fileSize: req.file.size,
+      mimeType: req.file.mimetype,
+      category: category,
+      startDate: startDate ? new Date(startDate) : undefined,
+      expiryDate: expiryDate ? new Date(expiryDate) : undefined,
+      notes
+    });
+
+    await document.save();
+
+    // Transform document for frontend
+    const reverseTypeMap = {
+      'medical-license': 'license',
+      'degree': 'degree',
+      'board-certification': 'certification',
+      'other': 'other'
+    };
+
+    const transformedDocument = {
+      _id: document._id,
+      name: document.title,
+      documentType: reverseTypeMap[document.type] || document.type,
+      category: document.category,
+      fileUrl: document.filePath,
+      uploadDate: document.createdAt,
+      startDate: document.startDate,
+      expiryDate: document.expiryDate,
+      verified: document.isVerified,
+      fileSize: document.fileSize,
+      mimeType: document.mimeType
+    };
+
+    res.status(201).json({
+      success: true,
+      message: 'Document uploaded successfully',
+      document: transformedDocument
+    });
+  } catch (error) {
+    console.error('Upload document error:', error);
+    res.status(500).json({ success: false, message: 'Error uploading document' });
+  }
+});
+
+// @route   POST /api/documents
+// @desc    Upload a new document (alias for /upload)
+// @access  Private (Doctors and ParaMedical users)
+router.post('/', auth, isDoctorOrParaMedical, uploadDocument.single('document'), async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'No file uploaded' });
@@ -123,8 +195,8 @@ router.post('/upload', auth, isDoctor, uploadDocument.single('document'), async 
 
 // @route   PUT /api/documents/:id
 // @desc    Update document details
-// @access  Private (Doctors only)
-router.put('/:id', auth, isDoctor, async (req, res) => {
+// @access  Private (Doctors and ParaMedical users)
+router.put('/:id', auth, isDoctorOrParaMedical, async (req, res) => {
   try {
     const document = await Document.findOne({ _id: req.params.id, user: req.userId });
 
@@ -153,8 +225,8 @@ router.put('/:id', auth, isDoctor, async (req, res) => {
 
 // @route   DELETE /api/documents/:id
 // @desc    Delete document
-// @access  Private (Doctors only)
-router.delete('/:id', auth, isDoctor, async (req, res) => {
+// @access  Private (Doctors and ParaMedical users)
+router.delete('/:id', auth, isDoctorOrParaMedical, async (req, res) => {
   try {
     const document = await Document.findOne({ _id: req.params.id, user: req.userId });
 
@@ -182,8 +254,8 @@ router.delete('/:id', auth, isDoctor, async (req, res) => {
 
 // @route   GET /api/documents/download/:id
 // @desc    Download document
-// @access  Private (Doctors only)
-router.get('/download/:id', auth, isDoctor, async (req, res) => {
+// @access  Private (Doctors and ParaMedical users)
+router.get('/download/:id', auth, isDoctorOrParaMedical, async (req, res) => {
   try {
     const document = await Document.findOne({ _id: req.params.id, user: req.userId });
 

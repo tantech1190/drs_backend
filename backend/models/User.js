@@ -23,7 +23,7 @@ const userSchema = new mongoose.Schema({
   },
   userType: {
     type: String,
-    enum: ['doctor', 'vendor', 'admin'],
+    enum: ['doctor', 'vendor','paramedical','attorneys','admin'],
     required: true
   },
   isAdmin: {

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const Event = require('../models/Event');
+const Job = require('../models/Job');
 const Document = require('../models/Document');
 const Message = require('../models/Message');
 const Connection = require('../models/Connection');
@@ -27,6 +28,7 @@ router.get('/stats', async (req, res) => {
       activeDoctors,
       activeVendors,
       totalEvents,
+      totalJobs,
       totalConnections,
       totalMessages,
       totalDocuments,
@@ -42,6 +44,7 @@ router.get('/stats', async (req, res) => {
       User.countDocuments({ userType: 'doctor', isActive: true }),
       User.countDocuments({ userType: 'vendor', isActive: true }),
       Event.countDocuments(),
+      Job.countDocuments(),
       Connection.countDocuments({ status: 'accepted' }),
       Message.countDocuments(),
       Document.countDocuments(),
@@ -60,10 +63,11 @@ router.get('/stats', async (req, res) => {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const [newDoctorsThisMonth, newVendorsThisMonth, newEventsThisMonth] = await Promise.all([
+    const [newDoctorsThisMonth, newVendorsThisMonth, newEventsThisMonth, newJobsThisMonth] = await Promise.all([
       User.countDocuments({ userType: 'doctor', createdAt: { $gte: thirtyDaysAgo } }),
       User.countDocuments({ userType: 'vendor', createdAt: { $gte: thirtyDaysAgo } }),
-      Event.countDocuments({ createdAt: { $gte: thirtyDaysAgo } })
+      Event.countDocuments({ createdAt: { $gte: thirtyDaysAgo } }),
+      Job.countDocuments({ createdAt: { $gte: thirtyDaysAgo } })
     ]);
 
     res.json({
@@ -80,6 +84,7 @@ router.get('/stats', async (req, res) => {
         },
         activity: {
           totalEvents,
+          totalJobs,
           totalConnections,
           totalMessages,
           totalDocuments
@@ -95,7 +100,8 @@ router.get('/stats', async (req, res) => {
         growth: {
           newDoctorsThisMonth,
           newVendorsThisMonth,
-          newEventsThisMonth
+          newEventsThisMonth,
+          newJobsThisMonth
         }
       }
     });
@@ -104,6 +110,37 @@ router.get('/stats', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to retrieve statistics'
+    });
+  }
+});
+
+// @route   GET /api/admin/recent-users
+// @desc    Get recently signed up users (last 7 days)
+// @access  Admin only
+router.get('/recent-users', async (req, res) => {
+  try {
+    const { limit = 10 } = req.query;
+    
+    // Calculate date 7 days ago
+    const oneWeekAgo = new Date();
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    
+    const recentUsers = await User.find({
+      createdAt: { $gte: oneWeekAgo }
+    })
+      .select('username email firstName lastName userType isActive isOnboarded createdAt profileImage')
+      .sort({ createdAt: -1 })
+      .limit(parseInt(limit));
+
+    res.json({
+      success: true,
+      users: recentUsers
+    });
+  } catch (error) {
+    console.error('Get recent users error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve recent users'
     });
   }
 });
@@ -852,6 +889,71 @@ router.delete('/events/:id', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Failed to delete event'
+    });
+  }
+});
+
+// ==================== JOB MANAGEMENT ====================
+
+// @route   GET /api/admin/jobs
+// @desc    Get all jobs
+// @access  Admin only
+router.get('/jobs', async (req, res) => {
+  try {
+    const { page = 1, limit = 20, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
+
+    const sort = {};
+    sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
+
+    const jobs = await Job.find()
+      .populate('postedBy', 'username email userType firstName lastName companyName')
+      .populate('applicants.user', 'username email firstName lastName')
+      .sort(sort)
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+
+    const count = await Job.countDocuments();
+
+    res.json({
+      success: true,
+      jobs,
+      totalPages: Math.ceil(count / limit),
+      currentPage: parseInt(page),
+      total: count
+    });
+  } catch (error) {
+    console.error('Get jobs error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to retrieve jobs',
+      error: error.message
+    });
+  }
+});
+
+// @route   DELETE /api/admin/jobs/:id
+// @desc    Delete job (admin override)
+// @access  Admin only
+router.delete('/jobs/:id', async (req, res) => {
+  try {
+    const job = await Job.findByIdAndDelete(req.params.id);
+
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        message: 'Job not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Job deleted successfully'
+    });
+  } catch (error) {
+    console.error('Delete job error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to delete job'
     });
   }
 });

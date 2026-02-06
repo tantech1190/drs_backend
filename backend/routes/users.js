@@ -7,6 +7,28 @@ const { uploadImage } = require('../middleware/upload');
 const fs = require('fs');
 const path = require('path');
 
+router.get('/onboarding-status', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).select('isOnboarded userType firstName lastName companyName');
+    
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    res.json({
+      success: true,
+      isOnboarded: user.isOnboarded,
+      userType: user.userType,
+      needsOnboarding: !user.isOnboarded,
+      userName: user.userType === 'doctor' || user.userType === 'paramedical' 
+        ? `${user.firstName} ${user.lastName}` 
+        : user.companyName
+    });
+  } catch (error) {
+    console.error('Get onboarding status error:', error);
+    res.status(500).json({ success: false, message: 'Error fetching onboarding status' });
+  }
+});
 // @route   GET /api/users/search
 // @desc    Search for users (doctors or vendors)
 // @access  Private
@@ -204,11 +226,22 @@ router.put('/profile', auth, uploadImage.fields([
   { name: 'companyLogo', maxCount: 1 }
 ]), async (req, res) => {
   try {
-    const allowedUpdates = req.user.userType === 'doctor'
-      ? ['firstName', 'lastName', 'specialty', 'subSpecialty', 'location', 'city', 'state', 'zip', 'phone', 'bio', 'jobStatus', 'showJobStatus', 'showPhone', 'showEmail', 'showLocation', 'showBio']
-      : ['companyName', 'contactPerson', 'phone', 'website', 'category', 'address', 'city', 'state', 'zip', 'description', 'servicesOffered'];
+    // Define allowed updates based on user type
+    let allowedUpdates;
+    
+    if (req.user.userType === 'doctor') {
+      allowedUpdates = ['firstName', 'lastName', 'specialty', 'subSpecialty', 'location', 'city', 'state', 'zip', 'phone', 'bio', 'jobStatus', 'showJobStatus', 'showPhone', 'showEmail', 'showLocation', 'showBio'];
+    } else if (req.user.userType === 'vendor') {
+      allowedUpdates = ['companyName', 'contactPerson', 'phone', 'website', 'category', 'address', 'city', 'state', 'zip', 'description', 'servicesOffered'];
+    } else if (req.user.userType === 'paramedical') {
+      allowedUpdates = ['firstName', 'lastName', 'specialty', 'subSpecialty', 'location', 'city', 'state', 'zip', 'phone', 'bio', 'jobStatus', 'showJobStatus'];
+    } else if (req.user.userType === 'attorneys') {
+      allowedUpdates = ['firstName', 'lastName', 'companyName', 'specialty', 'subSpecialty', 'location', 'city', 'state', 'zip', 'phone', 'website', 'bio','jobStatus','showJobStatus'];    } else {
+      // Default fallback for any other user types
+      allowedUpdates = ['phone', 'city', 'state', 'zip'];
+    }
 
-    // Bank details fields (optional, common for both types)
+    // Bank details fields (optional, common for all types)
     const bankDetailsFields = ['accountHolderName', 'bankName', 'accountNumber', 'routingNumber', 'accountType'];
     
     const updates = Object.keys(req.body);
@@ -315,6 +348,7 @@ router.put('/profile', auth, uploadImage.fields([
     res.status(500).json({ success: false, message: 'Error updating profile' });
   }
 });
+
 
 // @route   PUT /api/users/bank-details
 // @desc    Update user bank details (separate endpoint)
