@@ -69,9 +69,16 @@ const isParaMedical = (req, res, next) => {
   next();
 };
 
+// Check if user is paramedical
+const isAttorneys = (req, res, next) => {
+  if (req.user.userType !== 'attorneys') {
+    return res.status(403).json({ success: false, message: 'Access denied. Attorneys users only.' });
+  }
+  next();
+};
 // Check if user is doctor OR paramedical (for shared features like documents)
 const isDoctorOrParaMedical = (req, res, next) => {
-  if (req.user.userType !== 'doctor' && req.user.userType !== 'paramedical') {
+  if (req.user.userType !== 'doctor' && req.user.userType !== 'paramedical' && req.user.userType !== 'attorneys') {
     return res.status(403).json({ success: false, message: 'Access denied. Doctors and ParaMedical users only.' });
   }
   next();
@@ -134,4 +141,4 @@ const isAdmin = (req, res, next) => {
   next();
 };
 
-module.exports = { auth, isDoctor, isVendor, hasActiveSubscription, optionalAuth, isAdmin, isParaMedical, isDoctorOrParaMedical };
+module.exports = { auth, isDoctor, isVendor, hasActiveSubscription, optionalAuth, isAdmin, isParaMedical, isAttorneys,isDoctorOrParaMedical };
