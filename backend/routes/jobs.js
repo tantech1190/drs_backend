@@ -34,9 +34,12 @@ router.get('/', async (req, res) => {
       .sort({ createdAt: -1 })
       .limit(100);
 
+    // Filter out jobs where postedBy user was deleted
+    const validJobs = jobs.filter(job => job.postedBy !== null);
+
     res.json({
       success: true,
-      jobs
+      jobs: validJobs
     });
   } catch (error) {
     console.error('Get jobs error:', error);

@@ -532,8 +532,8 @@ router.post('/onboarding/attorneys', auth, uploadOnboarding.fields([
 // @access  Private
 router.post('/onboarding/paramedical', auth, uploadOnboarding.fields([
   { name: 'profilePicture', maxCount: 1 },
-  { name: 'professionalLicense', maxCount: 1 },
-  { name: 'certification', maxCount: 1 }
+  { name: 'degreeCertificate', maxCount: 1 },
+  { name: 'boardCertification', maxCount: 1 }
 ]), async (req, res) => {
   try {
     if (req.user.userType !== 'paramedical') {
@@ -577,29 +577,29 @@ router.post('/onboarding/paramedical', auth, uploadOnboarding.fields([
     const Document = require('../models/Document');
     const documents = [];
 
-    if (req.files?.professionalLicense) {
+    if (req.files?.degreeCertificate) {
       const doc = new Document({
         user: req.user._id,
-        title: 'Professional License',
-        type: 'professional-license',
-        fileName: req.files.professionalLicense[0].originalname,
-        filePath: '/uploads/documents/' + req.files.professionalLicense[0].filename,
-        fileSize: req.files.professionalLicense[0].size,
-        mimeType: req.files.professionalLicense[0].mimetype
+        title: 'Degree Certificate',
+        type: 'degree',
+        fileName: req.files.degreeCertificate[0].originalname,
+        filePath: '/uploads/documents/' + req.files.degreeCertificate[0].filename,
+        fileSize: req.files.degreeCertificate[0].size,
+        mimeType: req.files.degreeCertificate[0].mimetype
       });
       await doc.save();
       documents.push(doc);
     }
 
-    if (req.files?.certification) {
+    if (req.files?.boardCertification) {
       const doc = new Document({
         user: req.user._id,
-        title: 'Professional Certification',
-        type: 'certification',
-        fileName: req.files.certification[0].originalname,
-        filePath: '/uploads/documents/' + req.files.certification[0].filename,
-        fileSize: req.files.certification[0].size,
-        mimeType: req.files.certification[0].mimetype
+        title: 'Board Certification',
+        type: 'board-certification',
+        fileName: req.files.boardCertification[0].originalname,
+        filePath: '/uploads/documents/' + req.files.boardCertification[0].filename,
+        fileSize: req.files.boardCertification[0].size,
+        mimeType: req.files.boardCertification[0].mimetype
       });
       await doc.save();
       documents.push(doc);

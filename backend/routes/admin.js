@@ -25,8 +25,12 @@ router.get('/stats', async (req, res) => {
     const [
       totalDoctors,
       totalVendors,
+      totalParaMedical,
+      totalAttorneys,
       activeDoctors,
       activeVendors,
+      activeParaMedical,
+      activeAttorneys,
       totalEvents,
       totalJobs,
       totalConnections,
@@ -35,14 +39,20 @@ router.get('/stats', async (req, res) => {
       pendingContacts,
       onboardedDoctors,
       onboardedVendors,
+      onboardedParaMedical,
+      onboardedAttorneys,
       featuredVendors,
       activeSubscriptions,
       totalRevenue
     ] = await Promise.all([
       User.countDocuments({ userType: 'doctor' }),
       User.countDocuments({ userType: 'vendor' }),
+      User.countDocuments({ userType: 'paramedical' }),
+      User.countDocuments({ userType: 'attorneys' }),
       User.countDocuments({ userType: 'doctor', isActive: true }),
       User.countDocuments({ userType: 'vendor', isActive: true }),
+      User.countDocuments({ userType: 'paramedical', isActive: true }),
+      User.countDocuments({ userType: 'attorneys', isActive: true }),
       Event.countDocuments(),
       Job.countDocuments(),
       Connection.countDocuments({ status: 'accepted' }),
@@ -51,6 +61,8 @@ router.get('/stats', async (req, res) => {
       Contact.countDocuments({ status: 'new' }),
       User.countDocuments({ userType: 'doctor', isOnboarded: true }),
       User.countDocuments({ userType: 'vendor', isOnboarded: true }),
+      User.countDocuments({ userType: 'paramedical', isOnboarded: true }),
+      User.countDocuments({ userType: 'attorneys', isOnboarded: true }),
       User.countDocuments({ userType: 'vendor', isFeatured: true }),
       User.countDocuments({ userType: 'vendor', 'subscription.status': 'active' }),
       User.aggregate([
@@ -63,9 +75,11 @@ router.get('/stats', async (req, res) => {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
-    const [newDoctorsThisMonth, newVendorsThisMonth, newEventsThisMonth, newJobsThisMonth] = await Promise.all([
+    const [newDoctorsThisMonth, newVendorsThisMonth, newParaMedicalThisMonth, newAttorneysThisMonth, newEventsThisMonth, newJobsThisMonth] = await Promise.all([
       User.countDocuments({ userType: 'doctor', createdAt: { $gte: thirtyDaysAgo } }),
       User.countDocuments({ userType: 'vendor', createdAt: { $gte: thirtyDaysAgo } }),
+      User.countDocuments({ userType: 'paramedical', createdAt: { $gte: thirtyDaysAgo } }),
+      User.countDocuments({ userType: 'attorneys', createdAt: { $gte: thirtyDaysAgo } }),
       Event.countDocuments({ createdAt: { $gte: thirtyDaysAgo } }),
       Job.countDocuments({ createdAt: { $gte: thirtyDaysAgo } })
     ]);
@@ -76,11 +90,17 @@ router.get('/stats', async (req, res) => {
         users: {
           totalDoctors,
           totalVendors,
+          totalParaMedical,
+          totalAttorneys,
           activeDoctors,
           activeVendors,
+          activeParaMedical,
+          activeAttorneys,
           onboardedDoctors,
           onboardedVendors,
-          total: totalDoctors + totalVendors
+          onboardedParaMedical,
+          onboardedAttorneys,
+          total: totalDoctors + totalVendors + totalParaMedical + totalAttorneys
         },
         activity: {
           totalEvents,
@@ -100,6 +120,8 @@ router.get('/stats', async (req, res) => {
         growth: {
           newDoctorsThisMonth,
           newVendorsThisMonth,
+          newParaMedicalThisMonth,
+          newAttorneysThisMonth,
           newEventsThisMonth,
           newJobsThisMonth
         }
