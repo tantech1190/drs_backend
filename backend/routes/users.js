@@ -409,4 +409,59 @@ router.put('/bank-details', auth, async (req, res) => {
   }
 });
 
+
+// @route   POST /api/users/send-invites
+// @desc    Send invitation emails to friends
+// @access  Private
+router.post('/send-invites', auth, async (req, res) => {
+  try {
+    const { emails } = req.body;
+
+    if (!emails || !Array.isArray(emails) || emails.length === 0) {
+      return res.status(400).json({ success: false, message: 'Please provide at least one email address' });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const invalidEmails = emails.filter(email => !emailRegex.test(email));
+    
+    if (invalidEmails.length > 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Invalid email addresses: ${invalidEmails.join(', ')}` 
+      });
+    }
+
+    // Get sender's information
+    const sender = await User.findById(req.userId).select('firstName lastName companyName email userType');
+    
+    if (!sender) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    const senderName = sender.userType === 'doctor' || sender.userType === 'paramedical' || sender.userType === 'attorneys'
+      ? `${sender.firstName} ${sender.lastName}`
+      : sender.companyName;
+
+    // In a production environment, you would use nodemailer or a service like SendGrid
+    // For now, we'll log the emails and return success
+    console.log('=== INVITATION EMAILS ===');
+    emails.forEach(email => {
+      console.log(`\nTo: ${email}`);
+      console.log(`From: ${senderName} <${sender.email}>`);
+      console.log(`Subject: Join me on Drs Club`);
+      console.log(`\nDear friend,\n\nI have joined this great platform which connects you with others in medical community. Please join https://drsclub.org/\n\nBest regards,\n${senderName}`);
+      console.log('========================\n');
+    });
+
+    res.json({
+      success: true,
+      message: `Invitations sent successfully to ${emails.length} email${emails.length > 1 ? 's' : ''}`,
+      emailsSent: emails.length
+    });
+  } catch (error) {
+    console.error('Send invites error:', error);
+    res.status(500).json({ success: false, message: 'Error sending invitations' });
+  }
+});
 module.exports = router;

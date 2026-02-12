@@ -19,7 +19,10 @@ const generateToken = (userId) => {
 router.post('/signup', [
   body('username').trim().isLength({ min: 3 }).toLowerCase(),
   body('email').isEmail().normalizeEmail(),
-  body('password').isLength({ min: 6 }),
+  body('password')
+  .isLength({ min: 6 })
+  .withMessage('Password must be at least 6 characters long'),
+
   body('userType').isIn(['doctor', 'vendor', 'paramedical','attorneys'])
 ], async (req, res) => {
   try {
